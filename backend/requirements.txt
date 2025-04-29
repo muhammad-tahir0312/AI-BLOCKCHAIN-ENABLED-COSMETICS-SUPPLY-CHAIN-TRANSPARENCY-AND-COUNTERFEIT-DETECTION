@@ -35,3 +35,15 @@ python-dotenv==1.0.1
 # Blockchain tools
 # web3==5.31.1            # If connecting to Ethereum-compatible chains
 # multichain-api==0.1.0   # Hypothetical wrapper for Multichain CLI; see below
+
+requests==2.31.0  # For MultiChain RPC calls
+base58==2.1.1    # For MultiChain address encoding
+# ML/Data Science tools
+scikit-learn==1.6.1
+joblib==1.3.0
+pandas==2.2.2
+numpy==2.1.0
+
+# Logging
+loguru==0.7.2
+scikit-learn>=1.3.0  # needed for the ML model

@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from enum import Enum
+from datetime import datetime
 
 # Enums
 class UserRole(str, Enum):
@@ -30,7 +31,41 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 
-# 🔑 Add this LoginData model
 class LoginData(BaseModel):
     username: str
     password: str
+
+class ProductCreate(BaseModel):
+    product_name: str
+    ingredients: str
+    price: float
+    category: str
+    label: str
+
+class ProductOut(BaseModel):
+    id: int
+    product_name: str
+    ingredients: str
+    price: float
+    category: str
+    label: str
+    supplier_id: int
+    created_at: datetime
+    status: str = "success"
+    message: str = "Product registered successfully"
+    blockchain_tx: Optional[str] = None
+    fraud_confidence: Optional[float] = None
+    is_flagged: bool = False
+    
+    class Config:
+        from_attributes = True  # New in Pydantic v2
+
+class FlaggedProductOut(BaseModel):
+    id: int
+    product_id: int
+    supplier_id: int
+    reason: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
