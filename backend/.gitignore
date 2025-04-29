@@ -1,0 +1,95 @@
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+virtualenv/
+.POT
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.dll
+*.dylib
+*.so.*
+*.py[co]*
+*.DS_Store
+*.log
+
+# FastAPI / Uvicorn
+*.db
+*.db-journal
+*.sqlite3
+
+# # Environment Variables
+# .env
+# .env.local
+# .env.development
+# .env.test
+# .env.production
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+*.komodoproject
+.komodo-last-opened
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+*.sqlite3
+*.db3
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Pytest
+.pytest_cache/
+
+# Docker
+Dockerfile.build
+*.dockerignore
+docker-compose.override.yml
+.docker
+__pycache__/docker
+
+# Git-related
+.git/modules
+!.gitignore
+!.gitmodules
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+Icon?
+*.stackdump
+*.orig
+*.rej
+*~
