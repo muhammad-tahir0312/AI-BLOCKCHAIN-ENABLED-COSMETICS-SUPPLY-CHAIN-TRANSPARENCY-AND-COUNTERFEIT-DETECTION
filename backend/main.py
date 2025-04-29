@@ -1,14 +1,23 @@
 # app/main.py
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import models, schemas, auth
 from database import SessionLocal, engine
+from services.fraud_detection import FraudDetectionService
+from services.blockchain_service import BlockchainService
+from contextlib import asynccontextmanager
+from loguru import logger
+
+
+
+fraud_detector = FraudDetectionService()
+blockchain_service = BlockchainService()
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+# app = FastAPI()
 
 def get_db():
     db = SessionLocal()
@@ -16,6 +25,19 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    logger.info("Starting application...")
+    if not await blockchain_service.init_stream():
+        logger.warning("Application starting in offline mode (no blockchain)")
+    yield
+    # Shutdown
+    logger.info("Shutting down application...")
+
+app = FastAPI(lifespan=lifespan)
 
 @app.post("/auth/signup", response_model=schemas.UserOut, status_code=201)
 def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
@@ -36,9 +58,6 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    # Optional: Call Multichain API to assign on-chain roles here
-    # multichain_grant_permissions(new_user.id, new_user.role)
-
     return new_user
 
 
@@ -54,6 +73,88 @@ def login(username: str, password: str, db: Session = Depends(get_db)):
     
     access_token = auth.create_access_token(data={"sub": user.username, "role": user.role.value})
     return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/products", response_model=schemas.ProductOut)
+async def create_product(
+    product: schemas.ProductCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != models.UserRole.SUPPLIER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only suppliers can register products"
+        )
+    
+    # Check for blocked supplier
+    penalty = db.query(models.SupplierPenalty).filter(
+        models.SupplierPenalty.supplier_id == current_user.id
+    ).first()
+    
+    if penalty and penalty.is_blocked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Account is blocked due to {penalty.penalty_count} violations"
+        )
+    
+    try:
+        # Check for counterfeit
+        is_counterfeit, confidence, reason = fraud_detector.get_counterfeit_confidence(
+            product.model_dump()
+        )
+        
+        # Create product
+        new_product = models.Product(
+            **product.model_dump(),
+            supplier_id=current_user.id,
+            is_flagged=is_counterfeit,
+            fraud_confidence=confidence
+        )
+        db.add(new_product)
+        db.commit()
+        db.refresh(new_product)
+        
+        if is_counterfeit:
+            # Handle counterfeit product
+            flagged_product = models.FlaggedProduct(
+                product_id=new_product.id,
+                supplier_id=current_user.id,
+                reason=reason
+            )
+            db.add(flagged_product)
+            
+            # Update supplier penalty
+            if not penalty:
+                penalty = models.SupplierPenalty(supplier_id=current_user.id)
+                db.add(penalty)
+            
+            penalty.penalty_count += 1
+            if penalty.penalty_count >= 3:
+                penalty.is_blocked = True
+            
+            db.commit()
+            
+            new_product.status = "warning"
+            new_product.message = f"Product flagged as potentially counterfeit. Confidence: {confidence:.2%}"
+            
+        else:
+            # Handle legitimate product
+            try:
+                blockchain_tx = await blockchain_service.store_product(new_product.__dict__)
+                new_product.blockchain_tx = blockchain_tx
+            except Exception as e:
+                new_product.status = "partial_success"
+                new_product.message = "Product registered but blockchain storage failed"
+                print(f"Blockchain error: {str(e)}")
+        
+        return new_product
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to register product: {str(e)}"
+        )
 
 if __name__ == "__main__":
     import uvicorn
