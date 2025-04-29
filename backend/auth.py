@@ -5,6 +5,13 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import os
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
+from database import get_db
+from sqlalchemy.orm import Session
+import models
 
 
 load_dotenv()
@@ -27,3 +34,17 @@ def create_access_token(data: dict):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+
+security = HTTPBearer()
+
+async def get_current_user(token: str = Depends(security), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        user = db.query(models.User).filter(models.User.username == username).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return user
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
