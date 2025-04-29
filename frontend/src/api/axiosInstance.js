@@ -1,10 +1,8 @@
 import axios from 'axios';
 
-const instance = axios.create({
-  baseURL: 'http://localhost:8000', // your FastAPI backend
-  headers: {
-    'Content-Type': 'application/json',
-  },
+const apiClient = axios.create({
+  baseURL: 'http://localhost:8000',
+  withCredentials: false,
 });
 
-export default instance;
+export default apiClient;

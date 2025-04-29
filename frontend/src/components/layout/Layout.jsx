@@ -1,18 +1,26 @@
-import { Layout } from 'antd';
-import AppFooter from '../footer/Footer';
-import AppHeader from '../header/Header';
-import { Outlet } from 'react-router-dom';
+import React from "react";
 
-const { Content } = Layout;
-
-export default function AppLayout() {
+export default function Layout({ children }) {
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <AppHeader />
-      <Content style={{ padding: '24px 50px', backgroundColor: '#fff' }}>
-        <Outlet /> 
-      </Content>
-      <AppFooter />
-    </Layout>
+    <div className="d-flex flex-column vh-100">
+      {/* Header */}
+      <header className="bg-primary text-white py-3">
+        <div className="container">
+          <h1 className="text-center">AI Blockchain Cosmetics Supply Chain</h1>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-grow-1 d-flex justify-content-center align-items-center">
+        {children}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-dark text-white py-3">
+        <div className="container text-center">
+          <p>&copy; 2025 AI Blockchain Cosmetics Supply Chain. All rights reserved.</p>
+        </div>
+      </footer>
+    </div>
   );
 }

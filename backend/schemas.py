@@ -1,9 +1,8 @@
-# app/schemas.py
-
 from pydantic import BaseModel
 from typing import Optional
 from enum import Enum
 
+# Enums
 class UserRole(str, Enum):
     SUPPLIER = "supplier"
     MANUFACTURER = "manufacturer"
@@ -11,6 +10,7 @@ class UserRole(str, Enum):
     CONSUMER = "consumer"
     ADMIN = "admin"
 
+# Models
 class UserCreate(BaseModel):
     email: str
     username: str
@@ -29,3 +29,8 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+# 🔑 Add this LoginData model
+class LoginData(BaseModel):
+    username: str
+    password: str
