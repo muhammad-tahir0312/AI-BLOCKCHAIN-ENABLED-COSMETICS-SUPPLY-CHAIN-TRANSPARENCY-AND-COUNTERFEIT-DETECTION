@@ -30,7 +30,7 @@ const AppHeader = () => {
       { label: "Register Product", path: "/supplier/register-product" },
     ],
     consumer: [
-      { label: "Dashboard", path: "/consumer" },
+      { label: "Buy Product", path: "/consumer" },
       { label: "Verify Product", path: "/consumer/verify" },
     ],
   };
