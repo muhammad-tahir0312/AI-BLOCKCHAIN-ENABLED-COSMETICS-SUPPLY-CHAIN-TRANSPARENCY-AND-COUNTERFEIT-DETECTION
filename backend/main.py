@@ -136,7 +136,6 @@ async def create_product(
         db.refresh(new_product)
         
         if is_counterfeit:
-            # Handle counterfeit product
             flagged_product = models.FlaggedProduct(
                 product_id=new_product.id,
                 supplier_id=current_user.id,
@@ -144,7 +143,6 @@ async def create_product(
             )
             db.add(flagged_product)
             
-            # Update supplier penalty
             if not penalty:
                 penalty = models.SupplierPenalty(supplier_id=current_user.id)
                 db.add(penalty)
@@ -159,7 +157,6 @@ async def create_product(
             new_product.message = f"Product flagged as potentially counterfeit. Confidence: {confidence:.2%}"
             
         else:
-            # Handle legitimate product
             try:
                 blockchain_tx = await blockchain_service.store_product(new_product.__dict__)
                 new_product.blockchain_tx = blockchain_tx
