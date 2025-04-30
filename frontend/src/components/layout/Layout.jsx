@@ -1,18 +1,21 @@
-import { Layout } from 'antd';
-import AppFooter from '../footer/Footer';
-import AppHeader from '../header/Header';
-import { Outlet } from 'react-router-dom';
+import React from "react";
+import { Outlet } from "react-router-dom";
+import AppHeader from "../header/Header";
+import AppFooter from "../footer/Footer";
 
-const { Content } = Layout;
-
-export default function AppLayout() {
+export default function Layout({ children }) {
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <div className="d-flex flex-column vh-100">
+      {/* Header */}
       <AppHeader />
-      <Content style={{ padding: '24px 50px', backgroundColor: '#fff' }}>
-        <Outlet /> 
-      </Content>
+
+      {/* Main Content */}
+      <main className="flex-grow-1 d-flex justify-content-center align-items-center">
+        {children || <Outlet />}
+      </main>
+
+      {/* Footer */}
       <AppFooter />
-    </Layout>
+    </div>
   );
 }
