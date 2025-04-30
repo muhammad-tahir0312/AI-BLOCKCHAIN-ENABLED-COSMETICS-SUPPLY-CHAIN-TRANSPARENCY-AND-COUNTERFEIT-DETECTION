@@ -1,6 +1,7 @@
 import React from 'react'
 
-const Dashboard = () => {
+const AdminDashboard = () => {
+  const access_token =  localStorage.getItem("token");
   return (
     <div>
     <>
@@ -11,4 +12,4 @@ const Dashboard = () => {
   )
 }
 
-export default Dashboard;
+export default AdminDashboard;

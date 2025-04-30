@@ -1,26 +1,21 @@
 import React from "react";
+import { Outlet } from "react-router-dom";
+import AppHeader from "../header/Header";
+import AppFooter from "../footer/Footer";
 
 export default function Layout({ children }) {
   return (
     <div className="d-flex flex-column vh-100">
       {/* Header */}
-      <header className="bg-primary text-white py-3">
-        <div className="container">
-          <h1 className="text-center">AI Blockchain Cosmetics Supply Chain</h1>
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Main Content */}
       <main className="flex-grow-1 d-flex justify-content-center align-items-center">
-        {children}
+        {children || <Outlet />}
       </main>
 
       {/* Footer */}
-      <footer className="bg-dark text-white py-3">
-        <div className="container text-center">
-          <p>&copy; 2025 AI Blockchain Cosmetics Supply Chain. All rights reserved.</p>
-        </div>
-      </footer>
+      <AppFooter />
     </div>
   );
 }

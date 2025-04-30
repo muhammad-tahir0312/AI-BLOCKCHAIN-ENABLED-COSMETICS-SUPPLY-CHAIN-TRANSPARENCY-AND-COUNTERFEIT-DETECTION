@@ -1,8 +1,13 @@
 import React, { useState } from "react";
+import { jwtDecode } from "jwt-decode";
 import Layout from "../../components/layout/Layout";
+import { useNavigate } from "react-router-dom";
 import { login } from "../../api/auth";
+import toastr from "toastr";
+import "toastr/build/toastr.min.css";
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -14,22 +19,45 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
-
+    setLoading(true); // Show spinner
     try {
       const response = await login({
         username: formData.email,
         password: formData.password,
       });
 
-      localStorage.setItem("token", response.data.access_token);
-      window.location.href = "/dashboard";
+      const token = response.data.access_token;
+      localStorage.setItem("token", token);
+
+      const decoded = jwtDecode(token);
+      const role = decoded.role;
+      toastr.success("Login successfully!");
+      setTimeout(() => {
+        switch (role) {
+          case "admin":
+            navigate("/admin");
+            break;
+          case "supplier":
+            navigate("/supplier");
+            break;
+          case "consumer":
+            navigate("/consumer");
+            break;
+          // case "manufacturer":
+          //   navigate("/manufacturer");
+          //   break;
+          // case "logistics":
+          //   navigate("/logistics");
+          //   break;
+          default:
+            toastr.warning("Unknown role. Redirecting to home.");
+            navigate("/");
+        }
+      }, 500);
     } catch (err) {
-      setError("Login failed. Please check your credentials.");
-      console.error("Login error:", err.response?.data || err.message);
+      toastr.warning("Login failed. Please check your credentials.");
     } finally {
-      setLoading(false);
+      setLoading(false); // Hide spinner
     }
   };
 
@@ -66,7 +94,11 @@ export default function LoginPage() {
             />
           </div>
           <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-            {loading ? "Logging in..." : "Login"}
+            {loading ? (
+              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            ) : (
+              "Login"
+            )}
           </button>
         </form>
         <div className="text-center mt-3">

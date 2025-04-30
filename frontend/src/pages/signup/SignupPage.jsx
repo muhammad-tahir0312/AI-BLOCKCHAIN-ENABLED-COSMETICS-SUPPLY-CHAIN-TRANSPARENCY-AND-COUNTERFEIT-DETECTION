@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import Layout from "../../components/layout/Layout";
 import { signup } from "../../api/auth";
+import toastr from "toastr";
+import "toastr/build/toastr.min.css";
 
 // Role constants
 const ROLES = {
@@ -33,11 +35,12 @@ export default function SignupPage() {
     setError("");
 
     try {
-      await signup(formData); // Now includes role
-      alert("Signup successful! Please log in.");
+      await signup(formData); 
+      toastr.success("Signup successful! Please log in.");
       window.location.href = "/";
     } catch (err) {
       setError("Signup failed. Please check the details and try again.");
+      toastr.error(err.response?.data || "Signup failed.");
       console.error("Signup error:", err.response?.data || err.message);
     } finally {
       setLoading(false);
