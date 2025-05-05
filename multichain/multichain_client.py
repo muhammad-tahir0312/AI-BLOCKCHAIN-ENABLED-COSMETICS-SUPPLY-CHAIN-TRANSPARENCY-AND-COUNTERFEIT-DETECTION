@@ -7,8 +7,8 @@ class MultiChainClient:
     def __init__(self,
                  rpc_user: str,
                  rpc_password: str,
-                 rpc_host: str = "127.0.0.1",
-                 rpc_port: int  =  8571,
+                 rpc_host: str = "172.24.160.1",
+                 rpc_port: int  =  7188,
                  chain_name: str = "cosmeticsChain"):
         self.url = f"http://{rpc_host}:{rpc_port}"
         auth_str = f"{rpc_user}:{rpc_password}".encode()

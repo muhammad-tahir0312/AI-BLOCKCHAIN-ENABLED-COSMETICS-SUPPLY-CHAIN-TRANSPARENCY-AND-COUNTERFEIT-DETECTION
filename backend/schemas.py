@@ -11,7 +11,7 @@ class UserRole(str, Enum):
     CONSUMER = "consumer"
     ADMIN = "admin"
 
-# Models
+# Auth Models
 class UserCreate(BaseModel):
     email: str
     username: str
@@ -35,20 +35,19 @@ class LoginData(BaseModel):
     username: str
     password: str
 
+# Product Models
 class ProductCreate(BaseModel):
     product_name: str
-    ingredients: str
-    price: float
     category: str
-    label: str
+    price: float
+    ingredients: str
 
 class ProductOut(BaseModel):
     id: int
     product_name: str
-    ingredients: str
-    price: float
     category: str
-    label: str
+    price: float
+    ingredients: str
     supplier_id: int
     created_at: datetime
     status: str = "success"
@@ -58,7 +57,7 @@ class ProductOut(BaseModel):
     is_flagged: bool = False
     
     class Config:
-        from_attributes = True  # New in Pydantic v2
+        from_attributes = True
 
 class FlaggedProductOut(BaseModel):
     id: int
