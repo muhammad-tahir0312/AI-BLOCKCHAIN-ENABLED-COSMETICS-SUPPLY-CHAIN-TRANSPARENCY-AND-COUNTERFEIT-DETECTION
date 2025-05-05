@@ -10,10 +10,8 @@ const RegisterProduct = () => {
   const [showModal, setShowModal] = useState(false);
   const [product, setProduct] = useState({
     product_name: "",
-    description: "",
     category: "",
     price: "",
-    origin: "",
     ingredients: ""
   });
 
@@ -32,7 +30,7 @@ const RegisterProduct = () => {
       window.location.href = "/";
       return;
     }
-    // fetchProducts();
+    fetchProducts();
   }, [token]);
 
   const fetchProducts = async () => {
@@ -81,10 +79,8 @@ const RegisterProduct = () => {
 
       setProduct({
         product_name: "",
-        description: "",
         category: "",
         price: "",
-        origin: "",
         ingredients: ""
       });
     } catch (err) {
@@ -113,9 +109,7 @@ const RegisterProduct = () => {
           <thead className="table-light">
             <tr>
               <th>Name</th>
-              <th>Description</th>
               <th>Category</th>
-              <th>Origin</th>
               <th>Price</th>
               <th>Ingredients</th>
             </tr>
@@ -131,9 +125,7 @@ const RegisterProduct = () => {
               products.map((p) => (
                 <tr key={p.id}>
                   <td>{p.product_name}</td>
-                  <td>{p.description}</td>
                   <td>{p.category}</td>
-                  <td>{p.origin}</td>
                   <td>${p.price}</td>
                   <td style={{ whiteSpace: "pre-wrap" }}>{p.ingredients}</td>
                 </tr>
@@ -152,9 +144,7 @@ const RegisterProduct = () => {
           {error && <div className="alert alert-danger">{error}</div>}
           <form onSubmit={handleSubmit}>
             {[{ name: "product_name", label: "Product Name" },
-              { name: "description", label: "Description" },
               { name: "category", label: "Category" },
-              { name: "origin", label: "Origin" },
               { name: "price", label: "Price", type: "number" },
               { name: "ingredients", label: "Ingredients" }].map(({ name, label, type = "text" }) => (
                 <div className="mb-3" key={name}>

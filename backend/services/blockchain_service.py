@@ -10,20 +10,30 @@ from datetime import datetime
 
 load_dotenv()
 
+import logging
+
+# Configure the logger
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 class BlockchainService:
     def __init__(self):
-        self.rpc_url = f"http://{os.getenv('MULTICHAIN_HOST', 'localhost')}:{os.getenv('MULTICHAIN_PORT', '7324')}"
+        self.rpc_url = f"http://{os.getenv('MULTICHAIN_HOST', 'localhost')}:{os.getenv('MULTICHAIN_PORT', '7189')}"
         self.headers = {'Content-Type': 'application/json'}
-        self.auth = (
-            os.getenv('MULTICHAIN_USER', 'multichainrpc'),
-            os.getenv('MULTICHAIN_PASS', '')
-        )
+        
+        # Basic Auth for MultiChain
+        rpc_user = os.getenv('MULTICHAIN_USER', 'multichainrpc')
+        rpc_pass = os.getenv('MULTICHAIN_PASS', '')
+        self.auth = (rpc_user, rpc_pass)
+
         self.initialized = False
+        logger.error(f"I am called with {self.rpc_url}")
 
     async def _rpc_call(self, method: str, params: list = None) -> Dict:
         """Make RPC call to MultiChain node with better error handling"""
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
+                logger.debug(f"Making RPC call: {method} with params {params}")
                 response = await client.post(
                     self.rpc_url,
                     json={
@@ -35,6 +45,7 @@ class BlockchainService:
                     auth=self.auth
                 )
                 
+                logger.debug(f"RPC response: {response.text}")  # Log full response text
                 if response.status_code == 200:
                     result = response.json()
                     if 'error' in result and result['error']:
@@ -42,15 +53,13 @@ class BlockchainService:
                         return None
                     return result['result']
                 else:
-                    logger.error(f"HTTP Error: {response.status_code}")
+                    logger.error(f"HTTP Error: {response.status_code} - {response.text}")
                     return None
-                    
-        except httpx.ConnectError:
-            logger.error(f"Failed to connect to MultiChain at {self.rpc_url}")
-            return None
+        except httpx.RequestError as e:
+            logger.error(f"Request error occurred: {e}")
         except Exception as e:
-            logger.error(f"RPC call failed: {str(e)}")
-            return None
+            logger.error(f"Unexpected error occurred: {e}")
+        return None
 
     async def init_stream(self) -> bool:
         """Initialize the products stream with better error handling"""
