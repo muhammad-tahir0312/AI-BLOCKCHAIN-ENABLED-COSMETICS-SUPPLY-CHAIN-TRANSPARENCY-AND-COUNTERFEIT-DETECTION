@@ -24,6 +24,7 @@ class User(Base):
     role = Column(SQLAlchemyEnum(UserRole), default=UserRole.CONSUMER)
 
     products = relationship("Product", back_populates="supplier")
+    orders = relationship("Order", back_populates="consumer")
 
 class Product(Base):
     __tablename__ = "products"
@@ -43,6 +44,8 @@ class Product(Base):
     message = Column(String, default="Product registered successfully")  # Add this line
 
     supplier = relationship("User", back_populates="products")
+    orders = relationship("Order", back_populates="product")
+
 
 class SupplierPenalty(Base):
     __tablename__ = "supplier_penalties"
@@ -61,3 +64,22 @@ class FlaggedProduct(Base):
     supplier_id = Column(Integer, ForeignKey("users.id"))
     reason = Column(String)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"))
+    consumer_id = Column(Integer, ForeignKey("users.id"))
+    customer_name = Column(String, nullable=False)
+    contact_number = Column(String, nullable=False)
+    delivery_address = Column(String, nullable=False)
+    status = Column(String, default="NEW")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    estimated_delivery_days = Column(Integer, nullable=True)
+    delivery_notes = Column(String, nullable=True)
+    blockchain_tx = Column(String, nullable=True)
+
+    # Relationships
+    product = relationship("Product", back_populates="orders")
+    consumer = relationship("User", back_populates="orders")

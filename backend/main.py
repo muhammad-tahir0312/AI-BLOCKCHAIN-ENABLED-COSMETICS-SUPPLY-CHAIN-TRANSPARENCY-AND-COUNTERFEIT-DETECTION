@@ -6,11 +6,14 @@ import models, schemas, auth
 from database import SessionLocal, engine
 from services.fraud_detection import FraudDetectionService
 from services.blockchain_service import BlockchainService
+from services.order_service import OrderService
 from contextlib import asynccontextmanager
 from loguru import logger
 
 fraud_detector = FraudDetectionService()
 blockchain_service = BlockchainService()
+order_service = OrderService()
+
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -184,6 +187,134 @@ async def create_product(
 def get_all_products(db: Session = Depends(get_db)):
     products = db.query(models.Product).all()
     return products
+
+@app.post("/orders", response_model=schemas.OrderOut)
+async def create_order(
+    order: schemas.OrderCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    try:
+        # Create order in database
+        new_order = models.Order(
+            **order.model_dump(),
+            consumer_id=current_user.id,
+            status="NEW"
+        )
+        
+        db.add(new_order)
+        db.commit()
+        db.refresh(new_order)
+
+        # Store in blockchain
+        tx_id = await blockchain_service.store_order(new_order.__dict__)
+        if tx_id:
+            # Update order with blockchain transaction ID
+            new_order.blockchain_tx = tx_id
+            db.commit()
+            logger.info(f"Order created with blockchain tx: {tx_id}")
+        
+        return new_order
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Order creation failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@app.put("/orders/{order_id}", response_model=schemas.OrderOut)
+async def update_order_status(
+    order_id: int,
+    order_update: schemas.OrderUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    try:
+        order = db.query(models.Order).filter(models.Order.id == order_id).first()
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        # Update order status
+        for key, value in order_update.model_dump().items():
+            setattr(order, key, value)
+
+        # Store update in blockchain
+        tx_id = await blockchain_service.update_order(order.__dict__)
+        if tx_id:
+            order.blockchain_tx = tx_id  # Store the latest transaction ID
+            logger.info(f"Order updated with blockchain tx: {tx_id}")
+        
+        db.commit()
+        return order
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Order update failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@app.get("/orders/my-orders", response_model=List[schemas.OrderOut])
+async def get_my_orders(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    return order_service.get_all_orders(db, current_user.id)
+
+@app.get("/orders/{order_id}", response_model=schemas.OrderOut)
+async def get_order(
+    order_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    order = order_service.get_order(db, order_id)
+    
+    # Check if user has access to this order
+    if (current_user.role == models.UserRole.CONSUMER and 
+        order.consumer_id != current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this order"
+        )
+    
+    return order
+
+@app.get("/orders/{order_identifier}/ledger")
+async def get_order_ledger(
+    order_identifier: str,
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Get order ledger by ID or transaction hash"""
+    try:
+        ledger = await blockchain_service.get_order_history(order_identifier)
+        if not ledger:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No blockchain records found for this order"
+            )
+        return ledger
+    except Exception as e:
+        logger.error(f"Failed to fetch ledger: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch order ledger"
+        )
+
+@app.get("/admin/delivered-orders", response_model=List[schemas.OrderOut])
+async def get_delivered_orders(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != models.UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can access this endpoint"
+        )
+    
+    return order_service.get_delivered_orders(db)
 
 if __name__ == "__main__":
     import uvicorn

@@ -68,3 +68,31 @@ class FlaggedProductOut(BaseModel):
     
     class Config:
         from_attributes = True
+    
+class OrderStatus(str, Enum):
+    NEW = "NEW"
+    CONFIRMED = "CONFIRMED"
+    DELIVERED = "DELIVERED"
+
+class OrderCreate(BaseModel):
+    product_id: int
+    customer_name: str
+    contact_number: str
+    delivery_address: str
+
+class OrderUpdate(BaseModel):
+    status: OrderStatus
+    estimated_delivery_days: Optional[int] = None
+    delivery_notes: Optional[str] = None
+
+class OrderOut(BaseModel):
+    id: int
+    product_id: int
+    customer_name: str
+    contact_number: str
+    delivery_address: str
+    status: OrderStatus
+    created_at: datetime
+    estimated_delivery_days: Optional[int]
+    delivery_notes: Optional[str]
+    blockchain_tx: Optional[str]
