@@ -46,9 +46,9 @@ export default function LoginPage() {
           // case "manufacturer":
           //   navigate("/manufacturer");
           //   break;
-          // case "logistics":
-          //   navigate("/logistics");
-          //   break;
+          case "logistics":
+            navigate("/logistic");
+            break;
           default:
             toastr.warning("Unknown role. Redirecting to home.");
             navigate("/");

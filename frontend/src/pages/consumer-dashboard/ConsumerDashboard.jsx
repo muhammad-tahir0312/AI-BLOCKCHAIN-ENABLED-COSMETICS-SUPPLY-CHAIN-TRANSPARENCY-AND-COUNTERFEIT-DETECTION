@@ -1,37 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { jwtDecode } from "jwt-decode";
+import axios from "axios";
 import toastr from "toastr";
 import "toastr/build/toastr.min.css";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap/dist/js/bootstrap.bundle.min";
-
-const mockProducts = [
-  {
-    id: 1,
-    product_name: "Organic Honey",
-    description: "Pure and raw honey from natural hives.",
-    category: "Food",
-    origin: "USA",
-    price: 12.99,
-    ingredients: "Honey",
-  },
-  {
-    id: 2,
-    product_name: "Almond Milk",
-    description: "Unsweetened almond milk rich in calcium.",
-    category: "Beverage",
-    origin: "Canada",
-    price: 3.49,
-    ingredients: "Almonds, Water, Calcium carbonate",
-  },
-];
+import { jwtDecode } from "jwt-decode";
+import { Modal, Button, Form } from "react-bootstrap";
 
 const ConsumerDashboard = () => {
   const token = localStorage.getItem("token");
-  const [products, setProducts] = useState(mockProducts);
+  const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [showModal, setShowModal] = useState(false);
-
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -46,11 +24,11 @@ const ConsumerDashboard = () => {
         window.location.href = "/";
         return;
       }
-      // fetchProducts();
+      fetchProducts();
     } catch {
       window.location.href = "/";
     }
-  }, []);
+  }, [token]);
 
   const fetchProducts = async () => {
     try {
@@ -61,7 +39,7 @@ const ConsumerDashboard = () => {
       });
       setProducts(response.data);
     } catch (err) {
-      const errorMsg = err.response?.data?.detail || "Failed to fetch products.";
+      const errorMsg = err.response?.data?.detail || "Failed to load products.";
       toastr.error(errorMsg);
     }
   };
@@ -78,7 +56,7 @@ const ConsumerDashboard = () => {
 
   const handleOpenModal = () => {
     if (cart.length === 0) {
-      toastr.warning("Cart is empty.");
+      toastr.warning("Your cart is empty.");
       return;
     }
     setShowModal(true);
@@ -92,27 +70,47 @@ const ConsumerDashboard = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleConfirmOrder = () => {
+  const handleConfirmOrder = async () => {
     if (!form.name || !form.email || !form.phone || !form.address) {
-      toastr.error("Please fill all fields.");
+      toastr.error("Please fill in all required fields.");
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Order placed with details:", form, "Cart:", cart);
+    const orderData = {
+      consumer_id: jwtDecode(token).exp,
+      product_id: cart.id,
+      total_amount: cart.reduce((sum, p) => sum + p.price, 0),
+      delivery_address: form.address,
+      customer_name: form.name,
+      email: form.email,
+      contact_number: form.phone,
+    };
+
+    try {
+      const response = await axios.post("http://localhost:8000/orders", orderData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
       toastr.success("Order placed successfully!");
       setCart([]);
       setForm({ name: "", email: "", phone: "", address: "" });
       setShowModal(false);
-    }, 800);
+      console.log("Order Response:", response.data);
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || "Failed to place order.";
+      toastr.error(errorMsg);
+    }
   };
 
   return (
-    <div className="container">
-      <h2 className="my-4">Consumer Dashboard</h2>
+    <div className="container mt-5">
+      <h2 className="text-center mb-4">Consumer Dashboard</h2>
+
       <div className="table-responsive">
-        <table className="table table-bordered table-hover">
+        <table className="table table-bordered table-hover align-middle">
           <thead className="table-light">
             <tr>
               <th>Name</th>
@@ -127,7 +125,7 @@ const ConsumerDashboard = () => {
           <tbody>
             {products.length === 0 ? (
               <tr>
-                <td colSpan="7" className="text-center">
+                <td colSpan="7" className="text-center text-muted">
                   Loading products...
                 </td>
               </tr>
@@ -140,7 +138,7 @@ const ConsumerDashboard = () => {
                   <td>{p.origin}</td>
                   <td>${p.price.toFixed(2)}</td>
                   <td style={{ whiteSpace: "pre-wrap" }}>{p.ingredients}</td>
-                  <td>
+                  <td className="text-center">
                     {isInCart(p.id) ? (
                       <button
                         className="btn btn-danger btn-sm"
@@ -163,82 +161,71 @@ const ConsumerDashboard = () => {
           </tbody>
         </table>
       </div>
-      <button className="btn btn-success mt-3" onClick={handleOpenModal}>
-        Buy Selected ({cart.length})
-      </button>
 
-      {/* Order Confirmation Modal */}
-      {showModal && (
-        <div className="modal show fade d-block" tabIndex="-1">
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Confirm Your Order</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={handleCloseModal}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <form>
-                  <div className="mb-2">
-                    <label className="form-label">Full Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="name"
-                      value={form.name}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-                  <div className="mb-2">
-                    <label className="form-label">Email</label>
-                    <input
-                      type="email"
-                      className="form-control"
-                      name="email"
-                      value={form.email}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-                  <div className="mb-2">
-                    <label className="form-label">Phone Number</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="phone"
-                      value={form.phone}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-                  <div className="mb-2">
-                    <label className="form-label">Delivery Address</label>
-                    <textarea
-                      className="form-control"
-                      name="address"
-                      rows="3"
-                      value={form.address}
-                      onChange={handleFormChange}
-                    ></textarea>
-                  </div>
-                </form>
-              </div>
-              <div className="modal-footer">
-                <button
-                  className="btn btn-secondary"
-                  onClick={handleCloseModal}
-                >
-                  Cancel
-                </button>
-                <button className="btn btn-primary" onClick={handleConfirmOrder}>
-                  Confirm Order
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="d-flex justify-content-end">
+        <Button variant="success" onClick={handleOpenModal}>
+          Buy Selected ({cart.length})
+        </Button>
+      </div>
+
+      {/* Bootstrap Modal */}
+      <Modal show={showModal} onHide={handleCloseModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Your Order</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group className="mb-3" controlId="name">
+              <Form.Label>Full Name</Form.Label>
+              <Form.Control
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleFormChange}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="email">
+              <Form.Label>Email</Form.Label>
+              <Form.Control
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleFormChange}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="phone">
+              <Form.Label>Phone Number</Form.Label>
+              <Form.Control
+                type="text"
+                name="phone"
+                value={form.phone}
+                onChange={handleFormChange}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="address">
+              <Form.Label>Delivery Address</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                name="address"
+                value={form.address}
+                onChange={handleFormChange}
+              />
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseModal}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleConfirmOrder}>
+            Confirm Order
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

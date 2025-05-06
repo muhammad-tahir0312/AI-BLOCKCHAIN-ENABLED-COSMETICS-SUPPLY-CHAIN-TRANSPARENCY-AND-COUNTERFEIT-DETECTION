@@ -59,6 +59,25 @@ class ProductOut(BaseModel):
     class Config:
         from_attributes = True
 
+class SupplierOut(BaseModel):
+    id: int
+    username: str
+    email: str
+
+    class Config:
+        from_attributes = True
+
+class FlaggedProductWithSupplier(BaseModel):
+    id: int
+    product_id: int
+    supplier_id: int
+    reason: str
+    created_at: datetime
+    supplier: SupplierOut
+
+    class Config:
+        from_attributes = True
+
 class FlaggedProductOut(BaseModel):
     id: int
     product_id: int
@@ -75,7 +94,7 @@ class OrderStatus(str, Enum):
     DELIVERED = "DELIVERED"
 
 class OrderCreate(BaseModel):
-    product_id: int
+    # product_id: int
     customer_name: str
     contact_number: str
     delivery_address: str
@@ -87,7 +106,7 @@ class OrderUpdate(BaseModel):
 
 class OrderOut(BaseModel):
     id: int
-    product_id: int
+    # product_id: int
     customer_name: str
     contact_number: str
     delivery_address: str

@@ -236,7 +236,6 @@ async def update_order_status(
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
 
-        # Update order status
         for key, value in order_update.model_dump().items():
             setattr(order, key, value)
 
@@ -263,6 +262,36 @@ async def get_my_orders(
     current_user: models.User = Depends(auth.get_current_user)
 ):
     return order_service.get_all_orders(db, current_user.id)
+
+# get all the orders eg: GET /orders?status=DELIVERED&start_date=2025-01-01
+@app.get("/orders", response_model=List[schemas.OrderOut])
+async def get_filtered_orders(
+    status: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    consumer_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    # Admins and logistics can see all or filter by consumer_id
+    if current_user.role in [models.UserRole.ADMIN, models.UserRole.LOGISTICS]:
+        if consumer_id:
+            query = db.query(models.Order).filter(models.Order.consumer_id == consumer_id)
+        else:
+            query = db.query(models.Order)
+    elif current_user.role == models.UserRole.CONSUMER:
+        query = db.query(models.Order).filter(models.Order.consumer_id == current_user.id)
+    else:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if status:
+        query = query.filter(models.Order.status.ilike(f"%{status}%"))
+    if start_date:
+        query = query.filter(models.Order.created_at >= start_date)
+    if end_date:
+        query = query.filter(models.Order.created_at <= end_date)
+
+    return query.all()
 
 @app.get("/orders/{order_id}", response_model=schemas.OrderOut)
 async def get_order(
@@ -302,19 +331,42 @@ async def get_order_ledger(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch order ledger"
         )
-
-@app.get("/admin/delivered-orders", response_model=List[schemas.OrderOut])
-async def get_delivered_orders(
+# display all flagged-products along with their supplier
+@app.get("/flagged-products", response_model=List[schemas.FlaggedProductWithSupplier])
+async def get_flagged_products(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    if current_user.role != models.UserRole.ADMIN:
+    if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access this endpoint"
+            detail="Only admins can view flagged products"
         )
-    
-    return order_service.get_delivered_orders(db)
+
+    # Query FlaggedProduct along with associated User (supplier)
+    flagged_products = (
+        db.query(models.FlaggedProduct)
+        .join(models.User, models.FlaggedProduct.supplier_id == models.User.id)
+        .add_entity(models.User)
+        .all()
+    )
+
+    result = []
+    for fp, user in flagged_products:
+        result.append({
+            "id": fp.id,
+            "product_id": fp.product_id,
+            "supplier_id": fp.supplier_id,
+            "reason": fp.reason,
+            "created_at": fp.created_at,
+            "supplier": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email
+            }
+        })
+
+    return result
 
 if __name__ == "__main__":
     import uvicorn

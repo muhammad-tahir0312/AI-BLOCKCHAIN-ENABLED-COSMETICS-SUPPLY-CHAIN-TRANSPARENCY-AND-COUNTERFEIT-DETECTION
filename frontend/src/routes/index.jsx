@@ -13,6 +13,7 @@ import RegisterProduct from "../pages/supplier-dashboard/register-product/Regist
 
 import ConsumerDashboard from "../pages/consumer-dashboard/ConsumerDashboard";
 import Verify from "../pages/consumer-dashboard/verify/Verify";
+import LogisticDashboard from "../pages/logistic-dashboard/LogisticDashboard";
 
 export default function AppRoutes() {
   return (
@@ -27,6 +28,9 @@ export default function AppRoutes() {
 
         <Route path="/supplier" element={<SupplierDashboard />} />
         <Route path="/supplier/register-product" element={<RegisterProduct />} />
+
+        <Route path="/logistic" element={<LogisticDashboard />} />
+        <Route path="/logistic/register-product" element={<RegisterProduct />} />
 
         <Route path="/consumer" element={<ConsumerDashboard />} />
         <Route path="/consumer/verify" element={<Verify />} />

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class BlockchainService:
     def __init__(self):
-        self.rpc_url = f"http://{os.getenv('MULTICHAIN_HOST', 'localhost')}:{os.getenv('MULTICHAIN_PORT', '7189')}"
+        self.rpc_url = f"http://{os.getenv('MULTICHAIN_HOST', 'localhost')}:{os.getenv('MULTICHAIN_PORT', '7188')}"
         self.headers = {'Content-Type': 'application/json'}
         
         # Basic Auth for MultiChain
