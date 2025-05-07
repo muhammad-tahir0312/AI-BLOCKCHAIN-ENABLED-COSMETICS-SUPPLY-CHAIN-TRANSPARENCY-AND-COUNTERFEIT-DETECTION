@@ -33,7 +33,7 @@ const Anomalies = () => {
 
   return (
     <div className="container mt-5">
-      <h2>Anomalies Dashboard</h2>
+      <h2>Anomalies</h2>
       <p className="mb-4">List of flagged products and supplier details:</p>
 
       <table className="table table-striped table-bordered">
@@ -44,6 +44,10 @@ const Anomalies = () => {
             <th>Detected At</th>
             <th>Supplier Name</th>
             <th>Supplier Email</th>
+            <th>Product Name</th>
+            <th>Product Price</th>
+            <th>Product Category</th>
+            <th>Product Ingredients</th>
           </tr>
         </thead>
         <tbody>

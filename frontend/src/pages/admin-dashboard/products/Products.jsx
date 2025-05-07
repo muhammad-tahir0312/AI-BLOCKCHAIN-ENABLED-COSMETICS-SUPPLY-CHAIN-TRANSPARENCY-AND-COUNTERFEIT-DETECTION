@@ -19,7 +19,7 @@ const Products = () => {
       window.location.href = "/";
       return;
     }
-    // fetchProducts();
+    fetchProducts();
   }, [token]);
 
   const fetchProducts = async () => {
@@ -38,7 +38,7 @@ const Products = () => {
   };
 
   return (
-    <div className="container">
+    <div className="container mt-2" style={{ marginTop: '5px'}}>
       <div className="table-responsive">
         <table className="table table-bordered table-hover">
           <thead className="table-light">

@@ -87,7 +87,31 @@ class FlaggedProductOut(BaseModel):
     
     class Config:
         from_attributes = True
-    
+
+class Supplier(BaseModel):
+    id: int
+    username: str
+    email: str
+
+class Product(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+    price: float
+    created_at: datetime
+    is_flagged: bool
+    fraud_confidence: Optional[float]
+    blockchain_tx: Optional[str]
+
+class FlaggedProductWithDetails(BaseModel):
+    id: int
+    product_id: int
+    supplier_id: int
+    reason: str
+    created_at: datetime
+    supplier: Supplier
+    product: Product
+
 class OrderStatus(str, Enum):
     NEW = "NEW"
     CONFIRMED = "CONFIRMED"

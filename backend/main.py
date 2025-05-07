@@ -186,8 +186,62 @@ async def create_product(
 @app.get("/products", response_model=List[schemas.ProductOut])
 def get_all_products(db: Session = Depends(get_db)):
     products = db.query(models.Product).all()
-    return products
 
+    valid_products = []
+    for product in products:
+        if (
+            product.created_at is not None and
+            product.status is not None and
+            product.message is not None and
+            product.is_flagged is not None
+        ):
+            valid_products.append(product)
+        else:
+            logger.warning(f"Invalid product data: {product}")
+
+    return valid_products
+
+@app.delete("/products/{product_id}", status_code=204)
+async def delete_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    # Fetch the product from the database
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found"
+        )
+    
+    # Check if the current user is authorized to delete the product
+    if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPPLIER]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete this product"
+        )
+    
+    if current_user.role == models.UserRole.SUPPLIER and product.supplier_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete products you own"
+        )
+    
+    try:
+        # Delete the product
+        db.delete(product)
+        db.commit()
+        logger.info(f"Product with ID {product_id} deleted successfully")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to delete product: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete product"
+        )
+    
 @app.post("/orders", response_model=schemas.OrderOut)
 async def create_order(
     order: schemas.OrderCreate,
@@ -331,8 +385,9 @@ async def get_order_ledger(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch order ledger"
         )
+    
 # display all flagged-products along with their supplier
-@app.get("/flagged-products", response_model=List[schemas.FlaggedProductWithSupplier])
+@app.get("/flagged-products", response_model=List[schemas.FlaggedProductWithDetails])
 async def get_flagged_products(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
@@ -343,16 +398,18 @@ async def get_flagged_products(
             detail="Only admins can view flagged products"
         )
 
-    # Query FlaggedProduct along with associated User (supplier)
+    # Query FlaggedProduct along with associated User (supplier) and Product
     flagged_products = (
         db.query(models.FlaggedProduct)
         .join(models.User, models.FlaggedProduct.supplier_id == models.User.id)
+        .join(models.Product, models.FlaggedProduct.product_id == models.Product.id)
         .add_entity(models.User)
+        .add_entity(models.Product)
         .all()
     )
 
     result = []
-    for fp, user in flagged_products:
+    for fp, user, product in flagged_products:
         result.append({
             "id": fp.id,
             "product_id": fp.product_id,
@@ -363,6 +420,18 @@ async def get_flagged_products(
                 "id": user.id,
                 "username": user.username,
                 "email": user.email
+            },
+            "product": {
+                "id": product.id,
+                "name": product.product_name,
+                "category": product.category,
+                "ingredients": product.ingredients,
+                "price": product.price,
+                "description": getattr(product, "description", None),  # Handle missing description
+                "created_at": product.created_at or "1970-01-01T00:00:00Z",  # Default datetime
+                "is_flagged": product.is_flagged if product.is_flagged is not None else False,  # Default boolean
+                "fraud_confidence": product.fraud_confidence,
+                "blockchain_tx": product.blockchain_tx
             }
         })
 
