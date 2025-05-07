@@ -7,12 +7,15 @@ from database import SessionLocal, engine
 from services.fraud_detection import FraudDetectionService
 from services.blockchain_service import BlockchainService
 from services.order_service import OrderService
+from services.payment_service import PaymentService
 from contextlib import asynccontextmanager
 from loguru import logger
+from models import UserRole
 
 fraud_detector = FraudDetectionService()
 blockchain_service = BlockchainService()
 order_service = OrderService()
+payment_service = PaymentService()
 
 
 models.Base.metadata.create_all(bind=engine)
@@ -315,6 +318,73 @@ async def get_delivered_orders(
         )
     
     return order_service.get_delivered_orders(db)
+
+@app.post("/orders/{order_id}/payment", response_model=schemas.PaymentOut)
+async def create_payment(
+    order_id: int,
+    payment: schemas.PaymentCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    try:
+        # Check if user is consumer
+        if current_user.role != models.UserRole.CONSUMER:
+            raise HTTPException(
+                status_code=403, 
+                detail="Only consumers can create payments"
+            )
+        
+        print(order_id)
+        # Get order with consumer validation
+        order = order_service.get_order(
+            db, 
+            order_id=order_id, 
+            consumer_id=current_user.id
+        )
+        
+        # Check if payment already exists
+        existing_payment = db.query(models.Payment).filter(
+            models.Payment.order_id == order_id
+        ).first()
+        
+        if existing_payment:
+            raise HTTPException(
+                status_code=400,
+                detail="Payment already exists for this order"
+            )
+        
+        # Create payment
+        return await payment_service.create_payment(
+            db, 
+            order_id=order_id, 
+            amount=payment.amount
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Payment creation failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create payment"
+        )
+
+@app.post("/payments/{payment_id}/sign", response_model=schemas.PaymentOut)
+async def sign_payment(
+    payment_id: int,
+    signature: schemas.PaymentSignature,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role not in [UserRole.CONSUMER, UserRole.SUPPLIER, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Not authorized to sign payments")
+    
+    return await payment_service.process_signatures(
+        db, 
+        payment_id, 
+        current_user.role, 
+        signature.signed
+    )
 
 if __name__ == "__main__":
     import uvicorn
