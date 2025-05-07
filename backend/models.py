@@ -83,3 +83,27 @@ class Order(Base):
     # Relationships
     product = relationship("Product", back_populates="orders")
     consumer = relationship("User", back_populates="orders")
+    payment = relationship("Payment", back_populates="order", uselist=False)
+
+class PaymentStatus(str, Enum):
+    PENDING = "PENDING"
+    RELEASED = "RELEASED"
+    REFUNDED = "REFUNDED"
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"))
+    amount = Column(Float, nullable=False)
+    status = Column(String, default=PaymentStatus.PENDING)
+    user_signed = Column(Boolean, default=False)
+    producer_signed = Column(Boolean, default=False)
+    admin_signed = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    blockchain_tx = Column(String, nullable=True)
+
+    order = relationship("Order", back_populates="payment")
+
+    

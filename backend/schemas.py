@@ -115,3 +115,30 @@ class OrderOut(BaseModel):
     estimated_delivery_days: Optional[int]
     delivery_notes: Optional[str]
     blockchain_tx: Optional[str]
+
+class PaymentStatus(str, Enum):
+    PENDING = "PENDING"
+    RELEASED = "RELEASED"
+    REFUNDED = "REFUNDED"
+
+class PaymentCreate(BaseModel):
+    order_id: int
+    amount: float
+
+class PaymentSignature(BaseModel):
+    signed: bool
+
+class PaymentOut(BaseModel):
+    id: int
+    order_id: int
+    amount: float
+    status: str
+    user_signed: bool
+    producer_signed: bool
+    admin_signed: bool
+    blockchain_tx: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

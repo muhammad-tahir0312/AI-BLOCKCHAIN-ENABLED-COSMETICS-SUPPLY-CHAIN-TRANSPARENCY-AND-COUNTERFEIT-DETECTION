@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from datetime import datetime
@@ -65,17 +66,39 @@ class OrderService:
             raise
 
     @staticmethod
-    def get_order(db: Session, order_id: int):
-        order = db.query(models.Order).filter(
-            models.Order.id == order_id
-        ).first()
-        
-        if not order:
+    def get_order(db: Session, order_id: int, consumer_id: Optional[int] = None) -> models.Order:
+        """Get order with optional consumer validation"""
+        try:
+            logger.debug(f"Looking up order {order_id} for consumer {consumer_id}")
+            
+            query = db.query(models.Order).filter(models.Order.id == order_id)
+            
+            if consumer_id is not None:
+                query = query.filter(models.Order.consumer_id == consumer_id)
+            
+            order = query.first()
+            
+            if not order:
+                error_msg = f"Order {order_id} not found"
+                if consumer_id:
+                    error_msg += f" for consumer {consumer_id}"
+                logger.error(error_msg)
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=error_msg
+                )
+            
+            logger.debug(f"Found order: {order.id}")
+            return order
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error fetching order {order_id}: {str(e)}")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Order not found"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch order {order_id}"
             )
-        return order
 
     @staticmethod
     def get_all_orders(db: Session, consumer_id: int = None):
