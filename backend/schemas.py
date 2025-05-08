@@ -140,6 +140,12 @@ class OrderOut(BaseModel):
     delivery_notes: Optional[str]
     blockchain_tx: Optional[str]
 
+class BalanceOut(BaseModel):
+    total_balance: float
+
+    class Config:
+        orm_mode = True
+        
 class PaymentStatus(str, Enum):
     PENDING = "PENDING"
     RELEASED = "RELEASED"

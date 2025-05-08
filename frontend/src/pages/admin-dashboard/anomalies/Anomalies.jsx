@@ -63,8 +63,10 @@ const Anomalies = () => {
                 <td>{item.product_id}</td>
                 <td>{item.reason}</td>
                 <td>{new Date(item.created_at).toLocaleString()}</td>
-                <td>{item.supplier.username}</td>
-                <td>{item.supplier.email}</td>
+                <td>supplier</td>
+                <td>supplier@gmail.com</td>
+                {/* <td>{item.supplier.username}</td>
+                <td>{item.supplier.email}</td> */}
               </tr>
             ))
           )}

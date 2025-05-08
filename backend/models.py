@@ -95,6 +95,7 @@ class Payment(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(Integer, ForeignKey("orders.id"))
+    consumer_id = Column(Integer, ForeignKey("users.id"))  # Add this line
     amount = Column(Float, nullable=False)
     status = Column(String, default=PaymentStatus.PENDING)
     user_signed = Column(Boolean, default=False)
@@ -105,5 +106,6 @@ class Payment(Base):
     blockchain_tx = Column(String, nullable=True)
 
     order = relationship("Order", back_populates="payment")
+    consumer = relationship("User") 
 
     

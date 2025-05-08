@@ -507,6 +507,26 @@ async def sign_payment(
         signature.signed
     )
 
+@app.get("/user/{user_id}/balance", response_model=schemas.BalanceOut)
+async def get_user_balance(user_id: int, db: Session = Depends(get_db)):
+    try:
+        # Fetch all payments related to the user
+        payments = db.query(models.Payment).filter(models.Payment.consumer_id == user_id).all()
+
+        if not payments:
+            raise HTTPException(status_code=404, detail="No payments found for this user")
+
+        # Calculate the total balance for completed payments
+        total_balance = sum(payment.amount for payment in payments if payment.status == models.PaymentStatus.RELEASED)
+
+        return {"total_balance": total_balance}
+
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"Failed to fetch balance: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch balance")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
